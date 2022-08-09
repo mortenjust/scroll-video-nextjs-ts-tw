@@ -19,10 +19,10 @@ const Home: NextPage = () => {
 
     <section>
         <ScrollVideo
-          screenfulls={5}
+          screenfulls={4}
           width={1080} 
           height={1080}
-          frameCount={246}
+          frameCount={196}
         />
         </section>
 
