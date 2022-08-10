@@ -20,10 +20,14 @@ const Home: NextPage = () => {
     <section>
         <ScrollVideo
           screenfulls={4}
-          width={1080} 
+          imagePrefix="/images/turn-"
+          extension="jpg"
+          width={2581} 
           height={1080}
-          frameCount={196}
-        />
+          frameCount={365}
+        >
+          {/* insert children here */}
+        </ScrollVideo>
         </section>
 
     <section className='mt-32 mx-auto max-w-lg mb-32'>
@@ -35,3 +39,25 @@ const Home: NextPage = () => {
 }
 
 export default Home
+
+
+
+interface InfoBiteProps extends React.HTMLAttributes<HTMLDivElement> { 
+  children: React.ReactNode
+  heading:string
+  screenHeightsOffset:number 
+}
+
+function InfoBite({heading, children, screenHeightsOffset, ...rest} : InfoBiteProps) { 
+  return (
+    <div 
+    className='max-w-xl mx-auto absolute z-20'
+    style={{top: `${screenHeightsOffset * 100}vh`}}
+    {...rest} 
+    >
+
+      <h2 className='text-5xl font-bold'>{heading}</h2>
+      {children}
+    </div>
+  )
+}

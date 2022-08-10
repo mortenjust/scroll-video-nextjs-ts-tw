@@ -1,80 +1,103 @@
 import { useScroll, useTransform } from "framer-motion"
-import { useEffect, useRef, useState } from "react"
+import { request } from "https"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-interface Props {
+interface Props extends React.HTMLAttributes<HTMLDivElement> {
     screenfulls: number
+    imagePrefix: string
+    extension: string
     width: number
     height: number
     frameCount: number
-
+    children: React.ReactNode
 }
 
-export default function ScrollVideo({ screenfulls, width, height, frameCount }: Props) {
+export default function ScrollVideo({
+    screenfulls, width, height, frameCount, children, imagePrefix, extension = 'png',
+    ...rest }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    const contextRef = useRef<CanvasRenderingContext2D | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const [frames, setFrames] = useState<HTMLImageElement[]>([])
     const [currentFrame, setCurrentFrame] = useState<number>(0)
+    const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start end", "end end"] })
 
-    const { scrollYProgress } = useScroll({ target: containerRef, })
+    // transform 0-1 to 0-framecount
     const frameNo = useTransform(scrollYProgress, [0, 1], [0, frameCount])
     const lastFrame = useRef<number>(0)
 
     useEffect(() => {
-        frameNo.onChange(latest => {            
+
+        // subscribe to changes of the transformed scroll
+        frameNo.onChange(latest => {
             const frame = Math.ceil(latest)
-            if(lastFrame.current !== frame) {
-                console.log('f', frame);  
+            if (lastFrame.current !== frame) {
                 setCurrentFrame(frame)
             }
-            lastFrame.current = frame 
+            lastFrame.current = frame
         })
+
+        setCurrentFrame(0)
+
+        return () => { setFrames([]) }
     }, [])
-    
 
     // Get URL of a frame
     const getFrameURL = (i: number) => {
-        return `/images/turn-${i.toString().padStart(4, '0')}.png`
+        return `${imagePrefix}${i.toString().padStart(4, '0')}.${extension}`
     }
 
     // Preload
     const preloadFrames = () => {
-        for (let i = 1; i <= frameCount; i++) {
-            const img = new Image()
-            img.onload = () => { console.log("loaded", i)}
+        if (frames.length > 0) return
+        let loaded = 0 
+        for (let i = 0; i <= frameCount; i++) {
+            const img = new Image()            
             img.src = getFrameURL(i)
-            setFrames((current) => [...current, img])
+            img.onload = () => {                
+                loaded++
+                if(loaded === frameCount) { 
+                    console.log("DONE", loaded);
+                }
+            }
+            setFrames((current) => { return [...current, img] }
+            )
         }
     }
 
     // Setup canvas
     const prepareCanvas = () => {
         if (!canvasRef.current) return
-        const context = canvasRef.current.getContext("2d");
-        if (!context || !canvasRef.current) return
+        const context = canvasRef.current.getContext("2d", { alpha: false }); // off for performance, turn of if needed
+        if (!context) return
         context.canvas.width = width;
         context.canvas.height = height;
+        contextRef.current = context;
+        // console.log('contextref');
+
     };
 
     // Setup 
     useEffect(() => {
-        console.log("UE");
         preloadFrames()
         prepareCanvas()
     }, [])
 
+
+
     // Draw
     useEffect(() => {
-        if (!canvasRef.current || frames.length < 1) return
-        const context = canvasRef.current.getContext('2d')
-        if (!context) return
+        if (frames.length < 1 || !contextRef.current) return
+        
         let animationFrame = requestAnimationFrame(() => {
-            context.drawImage(frames[currentFrame], 0, 0)
+            contextRef.current?.drawImage(frames[currentFrame], 0, 0)
         })
         return () => { cancelAnimationFrame(animationFrame) }
     }, [currentFrame, frames])
 
     return (
-        <div ref={containerRef} style={{ height: `${screenfulls * 100}vh` }}>
+        <div ref={containerRef} {...rest} style={{ height: `${screenfulls * 100}vh` }}>
+            {children}
             <canvas
                 className="sticky w-full max-w-full max-h-full  top-0 m-auto block"
                 ref={canvasRef} />
