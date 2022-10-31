@@ -19,7 +19,6 @@ export default function ScrollVideo({
     const contextRef = useRef<CanvasRenderingContext2D | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const [frames, setFrames] = useState<HTMLImageElement[]>([])
-    const [cachedFrames, setCachedFrames] = useState<number>(0)
     const [currentFrame, setCurrentFrame] = useState<number>(0)
     const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start end", "end end"] })
 
@@ -49,22 +48,16 @@ export default function ScrollVideo({
     }
 
     // Preload
-    const cacheFrames = () => {
+    const preloadFrames = () => {
         if (frames.length > 0) return
-        let loaded = 0
+        let loaded = 0 
         for (let i = 0; i <= frameCount; i++) {
-            const img = new Image()
+            const img = new Image()            
             img.src = getFrameURL(i)
-            img.onload = () => {
-                if(loaded === 0) {
-                    const endTime = new Date().getTime()
-                    setCurrentFrame(0)
-                }   
-
+            img.onload = () => {                
                 loaded++
-                if (loaded === frameCount) {
+                if(loaded === frameCount) { 
                     console.log("DONE", loaded);
-                    setCachedFrames(loaded)                    
                 }
             }
             setFrames((current) => { return [...current, img] }
@@ -86,7 +79,7 @@ export default function ScrollVideo({
 
     // Setup 
     useEffect(() => {
-        cacheFrames()
+        preloadFrames()
         prepareCanvas()
     }, [])
 
@@ -94,8 +87,8 @@ export default function ScrollVideo({
 
     // Draw
     useEffect(() => {
-        if (cachedFrames < 1 || !contextRef.current) return
-
+        if (frames.length < 1 || !contextRef.current) return
+        
         let animationFrame = requestAnimationFrame(() => {
             contextRef.current?.drawImage(frames[currentFrame], 0, 0)
         })
@@ -104,20 +97,10 @@ export default function ScrollVideo({
 
     return (
         <div ref={containerRef} {...rest} style={{ height: `${screenfulls * 100}vh` }}>
-            cached frames: { cachedFrames }
-
-            <div className="top-0 sticky">
-
-
-                    <canvas
-                        className="w-full max-w-full max-h-full m-auto block"
-                        ref={canvasRef} />
-            
-
-                {/* <div>
-                    {children}
-                </div> */}
-            </div>
+            {children}
+            <canvas
+                className="sticky w-full max-w-full max-h-full  top-0 m-auto block"
+                ref={canvasRef} />
         </div>
     )
 }
